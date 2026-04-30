@@ -1,0 +1,18 @@
+{
+  "fields": {
+    "patient_id": { "source": "id_paciente", "required": true, "transform": "strip" },
+    "sex": { "source": "sexo_biologico", "required": true, "transform": "sex" },
+    "birth_date": { "source": "fecha_nacimiento", "transform": "date" },
+    "region": { "source": "ciudad_region", "required": true, "transform": "strip" },
+    "tumor_type": { "source": "tipo_tumor", "required": true, "transform": "strip" },
+    "stage_at_diagnosis": { "source": "estadio", "transform": "strip" },
+    "diagnosis_date": { "source": "fecha_dx", "transform": "date" },
+    "treatment_start_date": { "source": "fecha_inicio_tratamiento", "transform": "date" },
+    "first_suspicion_date": { "source": "fecha_sospecha", "transform": "date" },
+    "first_referral_date": { "source": "fecha_remision", "transform": "date" },
+    "origin_provider": { "source": "prestador_origen", "transform": "strip" },
+    "destination_provider": { "source": "prestador_destino", "transform": "strip" },
+    "authorization_status": { "source": "estado_autorizacion", "transform": "strip" },
+    "event_cost": { "source": "costo_evento", "transform": "number" }
+  }
+}

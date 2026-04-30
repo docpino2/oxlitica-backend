@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OxLER Oncology Cohort Record",
+  "type": "object",
+  "required": ["patient_id", "sex", "region", "tumor_type"],
+  "properties": {
+    "patient_id": { "type": "string", "minLength": 1 },
+    "sex": { "type": "string", "minLength": 1 },
+    "birth_date": { "type": "string", "format": "date" },
+    "region": { "type": "string", "minLength": 1 },
+    "tumor_type": { "type": "string", "minLength": 1 },
+    "stage_at_diagnosis": { "type": "string" },
+    "diagnosis_date": { "type": "string", "format": "date" },
+    "treatment_start_date": { "type": "string", "format": "date" },
+    "first_suspicion_date": { "type": "string", "format": "date" },
+    "first_referral_date": { "type": "string", "format": "date" },
+    "origin_provider": { "type": "string" },
+    "destination_provider": { "type": "string" },
+    "authorization_status": { "type": "string" },
+    "event_cost": { "type": "number" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,150 @@
+{
+  "contract_name": "oxler_oncology_canonical_contract",
+  "version": "0.1.0",
+  "scope": "cohortes oncologicas para analitica de riesgo, rutas y finanzas",
+  "description": "Contrato minimo para ingestion, homologacion y uso analitico de cohortes oncológicas institucionales.",
+  "required_domains": [
+    "cohort",
+    "clinical",
+    "operations",
+    "finance",
+    "network"
+  ],
+  "required_identifiers": {
+    "patient_id": "Identificador pseudonimizado y estable por paciente",
+    "encounter_id": "Identificador de evento cuando aplique",
+    "source_system": "Sistema de origen del registro",
+    "cutoff_date": "Fecha de corte analitico en formato ISO-8601"
+  },
+  "cohort_definition": {
+    "inclusion_rules": [
+      "Paciente con diagnostico oncologico confirmado o sospecha operativa definida por el cliente",
+      "Paciente incluido en el corte de la cohorte objetivo",
+      "Paciente con trazabilidad minima sobre al menos un evento clinico u operativo"
+    ],
+    "exclusion_rules": [
+      "Registros sin identificador estable",
+      "Duplicados no reconciliables",
+      "Casos sin consentimiento o habilitacion de uso cuando aplique"
+    ]
+  },
+  "minimum_variables": [
+    {
+      "name": "patient_id",
+      "domain": "cohort",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "sex",
+      "domain": "cohort",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "birth_date",
+      "domain": "cohort",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "name": "region",
+      "domain": "cohort",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "tumor_type",
+      "domain": "clinical",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "diagnosis_date",
+      "domain": "clinical",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "name": "stage_at_diagnosis",
+      "domain": "clinical",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "first_suspicion_date",
+      "domain": "operations",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "name": "first_referral_date",
+      "domain": "operations",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "name": "treatment_start_date",
+      "domain": "clinical",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "name": "origin_provider",
+      "domain": "network",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "destination_provider",
+      "domain": "network",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "authorization_status",
+      "domain": "operations",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "event_cost",
+      "domain": "finance",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "quality_rules": [
+    {
+      "rule": "patient_id_unique_within_source",
+      "severity": "critical"
+    },
+    {
+      "rule": "tumor_type_not_null",
+      "severity": "critical"
+    },
+    {
+      "rule": "diagnosis_after_birth_date",
+      "severity": "high"
+    },
+    {
+      "rule": "treatment_start_after_suspicion_or_diagnosis",
+      "severity": "high"
+    },
+    {
+      "rule": "event_cost_non_negative",
+      "severity": "high"
+    }
+  ],
+  "delivery_requirements": {
+    "format": [
+      "csv",
+      "parquet",
+      "xlsx"
+    ],
+    "encoding": "utf-8",
+    "date_format": "YYYY-MM-DD",
+    "refresh_cadence": "weekly_or_monthly",
+    "versioning": "mandatory"
+  }
+}

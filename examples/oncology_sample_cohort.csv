@@ -1,0 +1,7 @@
+patient_id,sex,birth_date,region,tumor_type,stage_at_diagnosis,diagnosis_date,treatment_start_date,first_suspicion_date,first_referral_date,origin_provider,destination_provider,authorization_status,event_cost
+P001,F,1978-02-10,Bogota,Cancer de mama,II,2026-01-15,2026-02-01,2025-12-20,2026-01-05,IPS Norte,Centro Oncologico A,approved,12500000
+P002,F,1969-08-02,Antioquia,Cancer de mama,III,2026-01-22,2026-02-20,2026-01-02,2026-01-10,IPS Oriente,Centro Oncologico A,approved,18450000
+P003,M,1958-11-13,Valle,Cancer de prostata,IV,2026-02-05,2026-02-28,2026-01-20,2026-01-30,Hospital Central,OncoRed Cali,pending,22300000
+P004,F,1983-05-21,Bogota,Cancer cervicouterino,I,2026-01-18,2026-01-30,2026-01-03,2026-01-09,IPS Sur,Centro Oncologico B,approved,8600000
+P005,F,1975-06-09,Atlantico,Cancer de colon,II,2026-02-11,2026-03-01,2026-01-28,2026-02-01,Clinica Caribe,OncoRed Barranquilla,denied,15600000
+P006,F,1988-12-01,Bogota,Cancer de mama,II,2026-02-08,2026-02-19,2026-01-18,2026-01-26,IPS Norte,Centro Oncologico A,approved,13200000

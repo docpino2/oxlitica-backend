@@ -1,0 +1,11 @@
+{
+  "dataset_path": "examples/general_analytics/churn_risk_sample.csv",
+  "target_column": "high_risk_flag",
+  "task_type": "classification",
+  "problem_name": "Prediccion de alto riesgo clinico-operativo",
+  "engine": "auto",
+  "metric": "roc_auc",
+  "test_size": 0.25,
+  "random_state": 42,
+  "drop_columns": ["patient_id"]
+}

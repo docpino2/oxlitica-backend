@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OxLER Oncology Column Mapping",
+  "type": "object",
+  "required": ["fields"],
+  "properties": {
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["source"],
+        "properties": {
+          "source": { "type": "string", "minLength": 1 },
+          "required": { "type": "boolean" },
+          "transform": {
+            "type": "string",
+            "enum": ["identity", "sex", "date", "number", "strip"]
+          },
+          "default": {
+            "type": ["string", "number", "boolean", "null"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

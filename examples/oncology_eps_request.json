@@ -1,0 +1,22 @@
+{
+  "institution_type": "EPS",
+  "condition_focus": "oncologia",
+  "population_scope": "cohorte nacional de cancer de mama",
+  "business_goals": [
+    "mejorar puerta de entrada",
+    "reducir fragmentacion de red",
+    "medir impacto financiero"
+  ],
+  "available_assets": [
+    "RIPS",
+    "autorizaciones",
+    "costos",
+    "facturacion"
+  ],
+  "requested_capabilities": [
+    "analitica de cohortes",
+    "analitica de puertas de entrada",
+    "simulacion financiera",
+    "KPIs de enrutamiento"
+  ]
+}

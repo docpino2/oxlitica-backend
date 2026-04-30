@@ -1,0 +1,13 @@
+patient_id,age,sex,region,prior_authorizations,missed_appointments,total_cost,last_gap_days,high_risk_flag
+G001,66,F,Bogota,5,1,25000000,12,1
+G002,54,M,Antioquia,1,0,4200000,2,0
+G003,72,F,Valle,6,3,31000000,24,1
+G004,49,F,Bogota,2,0,5600000,4,0
+G005,61,M,Atlantico,4,2,19800000,16,1
+G006,45,F,Antioquia,0,0,3900000,1,0
+G007,69,M,Bogota,7,4,35200000,28,1
+G008,52,F,Santander,2,1,8100000,8,0
+G009,58,M,Valle,3,2,17100000,14,1
+G010,47,F,Bogota,1,0,4300000,3,0
+G011,73,F,Antioquia,8,3,40100000,33,1
+G012,51,M,Bogota,2,0,6500000,6,0
