@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from .oncology_pipeline import load_tabular_records
+from .oncology_ingestion import load_tabular_records
 
 
 @dataclass(frozen=True)
@@ -80,6 +80,13 @@ class EntryFlowResult:
 
 def analyze_oncology_entry_flow(path: str) -> EntryFlowResult:
     rows = load_tabular_records(path)
+    return analyze_oncology_entry_flow_rows(rows, source_label=path)
+
+
+def analyze_oncology_entry_flow_rows(
+    rows: list[dict[str, str]],
+    source_label: str = "inline_records",
+) -> EntryFlowResult:
     total_records = len(rows)
     suspicion_count = sum(1 for row in rows if _parse_date(row.get("first_suspicion_date")))
     referral_count = sum(1 for row in rows if _parse_date(row.get("first_referral_date")))
@@ -102,7 +109,7 @@ def analyze_oncology_entry_flow(path: str) -> EntryFlowResult:
     anomalies = _detect_entry_flow_anomalies(rows, timing_metrics)
 
     return EntryFlowResult(
-        input_path=path,
+        input_path=source_label,
         total_records=total_records,
         patients_with_suspicion=suspicion_count,
         patients_with_referral=referral_count,

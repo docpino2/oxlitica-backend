@@ -71,11 +71,55 @@ PYTHONPATH=src python3 -m unittest tests/test_risk_agent.py
 - `POST /analytics/general/report-pack`
 - `POST /analytics/general/predict`
 - `POST /pipelines/oncology/map`
+- `POST /pipelines/upload`
 - `POST /pipelines/oncology/profile`
 - `POST /pipelines/oncology/entry-flow`
 - `POST /pipelines/oncology/financial-impact`
 - `POST /agent/plan`
 - `POST /llm/chat`
+
+## Flujo web para pipeline oncologico
+
+Para frontend web, el pipeline ya no depende solo de `input_path`.
+
+1. Subir archivo `csv` o `xlsx` a `POST /pipelines/upload`
+2. Recibir `file_id`
+3. Llamar:
+   - `POST /pipelines/oncology/profile`
+   - `POST /pipelines/oncology/entry-flow`
+   - `POST /pipelines/oncology/financial-impact`
+4. Enviar uno de estos formatos:
+
+Con archivo subido:
+
+```json
+{
+  "file_id": "upload_abc123"
+}
+```
+
+Con registros inline:
+
+```json
+{
+  "records": [
+    {
+      "patient_id": "P001",
+      "sex": "F",
+      "region": "Bogota",
+      "tumor_type": "Cancer de mama"
+    }
+  ]
+}
+```
+
+Uso local/interno:
+
+```json
+{
+  "input_path": "examples/oncology_sample_cohort.csv"
+}
+```
 
 ## Despliegue recomendado
 

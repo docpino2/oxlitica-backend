@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from .oncology_pipeline import load_tabular_records
+from .oncology_ingestion import load_tabular_records
 
 
 @dataclass(frozen=True)
@@ -84,6 +84,13 @@ class FinancialImpactResult:
 
 def analyze_oncology_financial_impact(path: str) -> FinancialImpactResult:
     rows = load_tabular_records(path)
+    return analyze_oncology_financial_impact_rows(rows, source_label=path)
+
+
+def analyze_oncology_financial_impact_rows(
+    rows: list[dict[str, str]],
+    source_label: str = "inline_records",
+) -> FinancialImpactResult:
     costs = [value for value in (_parse_float(row.get("event_cost")) for row in rows) if value is not None]
     total_cost = sum(costs)
     average_cost = (total_cost / len(costs)) if costs else None
@@ -106,7 +113,7 @@ def analyze_oncology_financial_impact(path: str) -> FinancialImpactResult:
     findings = _financial_findings(cost_concentration, denied_case_count, denied_case_cost, scenario_savings)
 
     return FinancialImpactResult(
-        input_path=path,
+        input_path=source_label,
         total_records=len(rows),
         total_cost=total_cost,
         average_cost=average_cost,

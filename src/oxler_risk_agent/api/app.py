@@ -18,22 +18,24 @@ from ..general_analytics import (
 from ..handoff_engine import build_handoff_preview
 from ..intent_router import INTENT_CATALOG, route_intent
 from ..models import UseCaseRequest
-from ..oncology_entry_flow import analyze_oncology_entry_flow
-from ..oncology_financial_impact import analyze_oncology_financial_impact
+from ..oncology_entry_flow import analyze_oncology_entry_flow, analyze_oncology_entry_flow_rows
+from ..oncology_financial_impact import analyze_oncology_financial_impact, analyze_oncology_financial_impact_rows
+from ..oncology_ingestion import LocalUploadStore, extract_upload_payload, resolve_oncology_input
 from ..oncology_mapping import map_oncology_csv
-from ..oncology_pipeline import profile_oncology_cohort
+from ..oncology_pipeline import profile_oncology_cohort, profile_oncology_rows
 from ..openrouter import OpenRouterChatRequest, chat_with_openrouter
 from ..tool_registry import TOOL_REGISTRY
 
 
 def build_app() -> Any:
     try:
-        from fastapi import FastAPI, HTTPException
+        from fastapi import FastAPI, HTTPException, Request
         from fastapi.middleware.cors import CORSMiddleware
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
             "FastAPI no esta instalado. Instale el extra de API con: pip install -e .[api]"
         ) from exc
+    globals()["Request"] = Request
 
     app = FastAPI(
         title="OxLER Oncology Risk Agent API",
@@ -49,6 +51,7 @@ def build_app() -> Any:
     )
     agent = build_default_agent()
     case_store = InMemoryCaseMemoryStore()
+    upload_store = LocalUploadStore()
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -129,12 +132,30 @@ def build_app() -> Any:
             "markdown": plan.to_markdown(),
         }
 
+    @app.post("/pipelines/upload")
+    async def upload_pipeline_input(request: Request) -> dict[str, Any]:
+        try:
+            filename, content, detected_content_type = extract_upload_payload(
+                body=await request.body(),
+                content_type=request.headers.get("content-type"),
+                filename_hint=request.headers.get("x-filename"),
+            )
+            stored = upload_store.save_upload(
+                filename=filename,
+                content=content,
+                content_type=detected_content_type,
+            )
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return stored.to_dict()
+
     @app.post("/pipelines/oncology/profile")
     def profile_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
-        input_path = payload.get("input_path")
-        if not input_path:
-            raise HTTPException(status_code=400, detail="input_path es obligatorio")
-        result = profile_oncology_cohort(input_path)
+        try:
+            resolved = resolve_oncology_input(payload, upload_store)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        result = profile_oncology_rows(resolved.rows, source_label=resolved.source_label)
         return result.to_dict()
 
     @app.post("/pipelines/oncology/map")
@@ -149,18 +170,20 @@ def build_app() -> Any:
 
     @app.post("/pipelines/oncology/entry-flow")
     def entry_flow_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
-        input_path = payload.get("input_path")
-        if not input_path:
-            raise HTTPException(status_code=400, detail="input_path es obligatorio")
-        result = analyze_oncology_entry_flow(input_path)
+        try:
+            resolved = resolve_oncology_input(payload, upload_store)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        result = analyze_oncology_entry_flow_rows(resolved.rows, source_label=resolved.source_label)
         return result.to_dict()
 
     @app.post("/pipelines/oncology/financial-impact")
     def financial_impact_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
-        input_path = payload.get("input_path")
-        if not input_path:
-            raise HTTPException(status_code=400, detail="input_path es obligatorio")
-        result = analyze_oncology_financial_impact(input_path)
+        try:
+            resolved = resolve_oncology_input(payload, upload_store)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        result = analyze_oncology_financial_impact_rows(resolved.rows, source_label=resolved.source_label)
         return result.to_dict()
 
     @app.post("/analytics/general/train")

@@ -1,7 +1,9 @@
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from oxler_risk_agent.agent import build_default_agent
+from oxler_risk_agent.api.app import build_app
 from oxler_risk_agent.contracts import load_oncology_contract
 from oxler_risk_agent.general_analytics import (
     GeneralAnalyticsRequest,
@@ -14,6 +16,7 @@ from oxler_risk_agent.general_analytics import (
 from oxler_risk_agent.models import UseCaseRequest
 from oxler_risk_agent.oncology_entry_flow import analyze_oncology_entry_flow
 from oxler_risk_agent.oncology_financial_impact import analyze_oncology_financial_impact
+from oxler_risk_agent.oncology_ingestion import LocalUploadStore, resolve_oncology_input
 from oxler_risk_agent.oncology_mapping import map_oncology_csv
 from oxler_risk_agent.oncology_pipeline import profile_oncology_cohort
 from oxler_risk_agent.openrouter import OpenRouterChatRequest, _build_openrouter_body
@@ -21,6 +24,7 @@ from oxler_risk_agent.context_builder import build_context_packet
 from oxler_risk_agent.handoff_engine import build_handoff_preview
 from oxler_risk_agent.intent_router import route_intent
 from oxler_risk_agent.tool_registry import TOOL_REGISTRY
+from fastapi.testclient import TestClient
 
 
 class RiskAnalyticsAgentTests(unittest.TestCase):
@@ -58,6 +62,88 @@ class RiskAnalyticsAgentTests(unittest.TestCase):
         self.assertEqual(result.unique_patients, 6)
         self.assertTrue(result.top_tumor_types)
         self.assertIn("total_cost", result.cost_metrics)
+
+    def test_resolve_oncology_input_supports_inline_records(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            resolved = resolve_oncology_input(
+                {
+                    "records": [
+                        {
+                            "patient_id": "P001",
+                            "sex": "F",
+                            "region": "Bogota",
+                            "tumor_type": "Cancer de mama",
+                        }
+                    ]
+                },
+                LocalUploadStore(temp_dir),
+            )
+        self.assertEqual(resolved.input_mode, "records")
+        self.assertEqual(resolved.source_label, "inline_records")
+        self.assertEqual(resolved.rows[0]["patient_id"], "P001")
+
+    def test_upload_store_persists_and_resolves_csv_file(self) -> None:
+        sample = Path("examples/oncology_sample_cohort.csv").read_bytes()
+        with TemporaryDirectory() as temp_dir:
+            store = LocalUploadStore(temp_dir)
+            stored = store.save_upload(filename="cohorte.csv", content=sample, content_type="text/csv")
+            resolved = store.resolve_upload(stored.file_id)
+            self.assertEqual(resolved.file_id, stored.file_id)
+            self.assertTrue(Path(resolved.stored_path).exists())
+
+    def test_upload_and_profile_endpoint_support_file_id_flow(self) -> None:
+        client = TestClient(build_app())
+        sample = Path("examples/oncology_sample_cohort.csv").read_bytes()
+        boundary = "BoundaryOxlitica"
+        body = (
+            b"--BoundaryOxlitica\r\n"
+            b'Content-Disposition: form-data; name="file"; filename="cohorte.csv"\r\n'
+            b"Content-Type: text/csv\r\n\r\n"
+            + sample
+            + b"\r\n--BoundaryOxlitica--\r\n"
+        )
+        upload_response = client.post(
+            "/pipelines/upload",
+            content=body,
+            headers={"content-type": f"multipart/form-data; boundary={boundary}"},
+        )
+        self.assertEqual(upload_response.status_code, 200)
+        upload_payload = upload_response.json()
+        self.assertIn("file_id", upload_payload)
+
+        profile_response = client.post(
+            "/pipelines/oncology/profile",
+            json={"file_id": upload_payload["file_id"]},
+        )
+        self.assertEqual(profile_response.status_code, 200)
+        profile_payload = profile_response.json()
+        self.assertEqual(profile_payload["records"], 6)
+        self.assertTrue(profile_payload["input_path"].startswith("upload:"))
+
+    def test_entry_flow_endpoint_supports_inline_records(self) -> None:
+        client = TestClient(build_app())
+        response = client.post(
+            "/pipelines/oncology/entry-flow",
+            json={
+                "records": [
+                    {
+                        "patient_id": "P001",
+                        "sex": "F",
+                        "region": "Bogota",
+                        "tumor_type": "Cancer de mama",
+                        "first_suspicion_date": "2025-01-01",
+                        "first_referral_date": "2025-01-10",
+                        "treatment_start_date": "2025-01-20",
+                        "authorization_status": "Aprobada",
+                        "origin_provider": "Clinica Norte",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["patients_with_treatment"], 1)
+        self.assertEqual(payload["input_path"], "inline_records")
 
     def test_map_oncology_csv_normalizes_source_columns(self) -> None:
         source = Path("examples/oncology_raw_source.csv")

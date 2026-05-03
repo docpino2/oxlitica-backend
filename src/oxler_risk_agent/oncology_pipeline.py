@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import csv
 import json
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+from .oncology_ingestion import load_tabular_records
 
 
 REQUIRED_FIELDS = ("patient_id", "sex", "region", "tumor_type")
@@ -79,17 +80,12 @@ class PipelineResult:
         return "\n".join(lines)
 
 
-def load_tabular_records(path: str) -> list[dict[str, str]]:
-    file_path = Path(path)
-    suffix = file_path.suffix.lower()
-    if suffix != ".csv":
-        raise ValueError("El MVP actual soporta perfilamiento tabular desde archivos CSV.")
-    with file_path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
 def profile_oncology_cohort(path: str) -> PipelineResult:
     rows = load_tabular_records(path)
+    return profile_oncology_rows(rows, source_label=path)
+
+
+def profile_oncology_rows(rows: list[dict[str, str]], source_label: str = "inline_records") -> PipelineResult:
     record_count = len(rows)
     patient_ids = [row.get("patient_id", "").strip() for row in rows if row.get("patient_id", "").strip()]
     unique_patients = len(set(patient_ids))
@@ -112,7 +108,7 @@ def profile_oncology_cohort(path: str) -> PipelineResult:
     cost_metrics = _cost_metrics(rows)
 
     return PipelineResult(
-        input_path=path,
+        input_path=source_label,
         records=record_count,
         unique_patients=unique_patients,
         completeness_by_field=completeness,
