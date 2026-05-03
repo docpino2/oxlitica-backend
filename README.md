@@ -61,6 +61,11 @@ PYTHONPATH=src python3 -m unittest tests/test_risk_agent.py
 - `GET /health`
 - `GET /contracts/oncology`
 - `GET /analytics/general/capabilities`
+- `GET /orchestration/intents`
+- `GET /orchestration/tools`
+- `POST /orchestration/route`
+- `POST /orchestration/context-preview`
+- `POST /orchestration/handoff-preview`
 - `POST /analytics/general/preview`
 - `POST /analytics/general/train`
 - `POST /analytics/general/report-pack`

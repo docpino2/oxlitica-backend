@@ -4,6 +4,8 @@ from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from ..agent import build_default_agent
+from ..case_memory import InMemoryCaseMemoryStore
+from ..context_builder import build_context_packet
 from ..contracts import load_oncology_contract
 from ..general_analytics import (
     GeneralAnalyticsRequest,
@@ -13,12 +15,15 @@ from ..general_analytics import (
     preview_dataset_columns,
     train_general_automl,
 )
+from ..handoff_engine import build_handoff_preview
+from ..intent_router import INTENT_CATALOG, route_intent
 from ..models import UseCaseRequest
 from ..oncology_entry_flow import analyze_oncology_entry_flow
 from ..oncology_financial_impact import analyze_oncology_financial_impact
 from ..oncology_mapping import map_oncology_csv
 from ..oncology_pipeline import profile_oncology_cohort
 from ..openrouter import OpenRouterChatRequest, chat_with_openrouter
+from ..tool_registry import TOOL_REGISTRY
 
 
 def build_app() -> Any:
@@ -43,6 +48,7 @@ def build_app() -> Any:
         allow_headers=["*"],
     )
     agent = build_default_agent()
+    case_store = InMemoryCaseMemoryStore()
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -55,6 +61,41 @@ def build_app() -> Any:
     @app.get("/analytics/general/capabilities")
     def get_general_analytics_capabilities() -> dict[str, Any]:
         return detect_general_analytics_capabilities()
+
+    @app.get("/orchestration/intents")
+    def get_orchestration_intents() -> dict[str, Any]:
+        return {"items": [item.to_dict() for item in INTENT_CATALOG]}
+
+    @app.get("/orchestration/tools")
+    def get_orchestration_tools() -> dict[str, Any]:
+        return {"items": [item.to_dict() for item in TOOL_REGISTRY]}
+
+    @app.post("/orchestration/route")
+    def orchestration_route(payload: dict[str, Any]) -> dict[str, Any]:
+        decision = route_intent(payload)
+        return decision.to_dict()
+
+    @app.post("/orchestration/context-preview")
+    def orchestration_context_preview(payload: dict[str, Any]) -> dict[str, Any]:
+        decision = route_intent(payload)
+        state = _resolve_case_state(case_store, payload, decision.intent_id)
+        packet = build_context_packet(decision.intent_id, payload, state)
+        return {
+            "route": decision.to_dict(),
+            "case_state": state.to_dict() if state else None,
+            "context_packet": packet.to_dict(),
+        }
+
+    @app.post("/orchestration/handoff-preview")
+    def orchestration_handoff_preview(payload: dict[str, Any]) -> dict[str, Any]:
+        decision = route_intent(payload)
+        state = _resolve_case_state(case_store, payload, decision.intent_id)
+        preview = build_handoff_preview(decision, payload, state)
+        return {
+            "route": decision.to_dict(),
+            "case_state": state.to_dict() if state else None,
+            "handoff": preview.to_dict() if preview else None,
+        }
 
     @app.post("/analytics/general/preview")
     def general_analytics_preview(payload: dict[str, Any]) -> dict[str, Any]:
@@ -212,3 +253,21 @@ def dataclass_to_dict(value: Any) -> Any:
     if is_dataclass(value):
         return asdict(value)
     return value
+
+
+def _resolve_case_state(
+    case_store: InMemoryCaseMemoryStore,
+    payload: dict[str, Any],
+    active_intent: str,
+) -> Any:
+    case_id = payload.get("case_id")
+    tenant_id = payload.get("tenant_id", "tenant-demo")
+    goal = payload.get("message") or payload.get("problem_name") or payload.get("population_scope")
+    if not case_id or not goal:
+        return None
+    return case_store.get_or_create(
+        case_id=case_id,
+        tenant_id=tenant_id,
+        current_goal=str(goal),
+        active_intent=active_intent,
+    )

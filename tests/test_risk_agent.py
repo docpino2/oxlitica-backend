@@ -17,6 +17,10 @@ from oxler_risk_agent.oncology_financial_impact import analyze_oncology_financia
 from oxler_risk_agent.oncology_mapping import map_oncology_csv
 from oxler_risk_agent.oncology_pipeline import profile_oncology_cohort
 from oxler_risk_agent.openrouter import OpenRouterChatRequest, _build_openrouter_body
+from oxler_risk_agent.context_builder import build_context_packet
+from oxler_risk_agent.handoff_engine import build_handoff_preview
+from oxler_risk_agent.intent_router import route_intent
+from oxler_risk_agent.tool_registry import TOOL_REGISTRY
 
 
 class RiskAnalyticsAgentTests(unittest.TestCase):
@@ -195,6 +199,42 @@ class RiskAnalyticsAgentTests(unittest.TestCase):
         self.assertIn("Prioriza accion institucional", body["messages"][0]["content"])
         self.assertIn("Contexto estructurado", body["messages"][1]["content"])
         self.assertIn('"records": 42', body["messages"][1]["content"])
+
+    def test_intent_router_detects_model_factory_cases(self) -> None:
+        route = route_intent(
+            {
+                "message": "Necesito entrenar un modelo de clasificacion para alto riesgo",
+                "dataset_path": "examples/general_analytics/churn_risk_sample.csv",
+                "target_column": "high_risk_flag",
+            }
+        )
+        self.assertEqual(route.intent_id, "model_factory")
+        self.assertIn("general_analytics_train", route.preferred_tools)
+
+    def test_context_builder_returns_operational_context(self) -> None:
+        packet = build_context_packet(
+            "operational_friction",
+            {
+                "institution_type": "EPS",
+                "condition_focus": "oncologia",
+                "population_scope": "cohorte con demoras en autorizacion",
+            },
+        )
+        self.assertEqual(packet.context_type, "operational_friction_context")
+        self.assertIn("institution_type", packet.facts)
+        self.assertTrue(packet.guidance)
+
+    def test_handoff_preview_targets_pegaxus_when_heor_intent(self) -> None:
+        route = route_intent({"message": "Necesito un caso HEOR y ROI para esta cohorte"})
+        preview = build_handoff_preview(route, {"condition_focus": "oncologia", "case_id": "case-1"})
+        self.assertIsNotNone(preview)
+        assert preview is not None
+        self.assertEqual(preview.target_agent, "pegaxus")
+        self.assertEqual(preview.payload["case_id"], "case-1")
+
+    def test_tool_registry_includes_swarm_handoff(self) -> None:
+        tool_ids = [item.identifier for item in TOOL_REGISTRY]
+        self.assertIn("swarm_handoff", tool_ids)
 
 
 if __name__ == "__main__":
